@@ -13,8 +13,20 @@ for col in ['Utilities_w', 'Utilities_logp']:
     if col not in df2.columns:
         df2[col] = pd.NA
 
-# Align df2 column order to df1
-df2 = df2[df1.columns]
+
+
+
+# Identify and separate 'portfolio value' explicitly
+portfolio_col = 'portfolio_value'
+other_cols = [col for col in df1.columns if not (col.endswith('_w') or col.endswith('_logp') or col == portfolio_col)]
+
+# Reorder columns
+w_cols = sorted([col for col in df1.columns if col.endswith('_w')])
+logp_cols = sorted([col for col in df1.columns if col.endswith('_logp')])
+
+ordered_cols = other_cols + w_cols + logp_cols + [portfolio_col]
+df1 = df1[ordered_cols]
+df2 = df2[ordered_cols]
 
 # Combine the two datasets
 merged_df = pd.concat([df1, df2], ignore_index=True)

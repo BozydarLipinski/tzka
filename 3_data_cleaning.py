@@ -14,7 +14,6 @@ df_combined = df_combined.sort_values(by="filedFor")
 # Save the final dataset
 df_combined.to_csv("merged_holdings.csv", index=False)
 
-print("Datasets merged successfully!")
 
 # Group by period (filedFor), company name (nameOfIssuer), and ticker
 df_cleaned = df_combined.groupby(["filedFor", "nameOfIssuer", "ticker"], as_index=False).agg({

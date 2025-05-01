@@ -3,7 +3,7 @@ import yfinance as yf
 
 
 # Sample dataset with tickers
-df = pd.read_csv("old_data.csv")
+df = pd.read_csv("old_data_V1.csv")
 
 # Step 1: Extract unique tickers
 unique_tickers = df['ticker'].unique()

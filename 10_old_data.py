@@ -3,17 +3,17 @@ import requests
 import re
 import json
 from datetime import datetime
-import numpy as np
 import csv
+import numpy as np
 
 cusip = {}
-
+cusip_mapping = pd.read_csv("holdings.csv", header=None)
 
 with open('cusip_V1.csv', newline='') as f:
     reader = csv.reader(f)
     for row in reader:
         if len(row) >= 2:  # make sure there's at least two columns
-            cusip[row[1]] = row[0]
+            cusip[row[2]] = row[0]
 
 
 def remove_until_s(lines):
@@ -51,7 +51,7 @@ def get_column_widths(block):
     return [positions[i + 1] - positions[i] for i in range(len(positions) - 1)]
 
 
-def get_company_name(cusip_id):
+def get_cik(cusip_id):
     if cusip_id in cusip:
         return int(float(cusip[cusip_id]))
     return ""
@@ -103,6 +103,33 @@ def retrieve_data_from_url(url, filing_date):
         return pd.DataFrame()
 
 
+def normalize_cusip(value):
+    value = str(value).strip()
+
+    if ' ' in value:
+        parts = value.split()
+        if len(parts) >= 2:
+            first_part = parts[0]
+            second_part = parts[1][:2]  # only first two characters
+
+            if len(first_part) == 5:
+                first_part = '0' + first_part  # pad a leading zero
+
+            return first_part + second_part
+        else:
+            return value  # fallback if badly formatted
+    else:
+        return value[:8]
+
+
+def get_ticker(cusip):
+    row = cusip_mapping[cusip_mapping.iloc[:, 0] == cusip]
+    if row.empty:
+        return ""
+    else:
+        return row.iloc[0, 1]
+
+
 # MAIN
 
 pd.set_option('display.max_rows', None)  # Show all rows
@@ -120,23 +147,28 @@ txt_links = get_all_txt_links()
 
 all_dfs = []
 for url in txt_links:
-    data = retrieve_data_from_url(url[1], url[0])
-    if not data.empty:
-        print(url[0] + '    ' + url[1])
-        all_dfs.append(data)
+   data = retrieve_data_from_url(url[1], url[0])
+   if not data.empty:
+       print(url[0] + '    ' + url[1])
+       all_dfs.append(data)
 
 merged_df = pd.concat(all_dfs, ignore_index=True)
-merged_df.columns.values[0] = 'cik'
+merged_df.iloc[:, 0] = merged_df.iloc[:, 0].apply(normalize_cusip)
+
+
+merged_df.columns.values[0] = 'cupsid'
 merged_df.columns.values[1] = 'valuation'
 merged_df.columns.values[2] = 'shares'
 
 for i in range(len(merged_df)):
-    merged_df.at[i, 'cik'] = get_company_name(merged_df.iloc[i]['cik'][:6])
+    cupsid = merged_df.iloc[i]['cupsid']
+    merged_df.at[i, 'cik'] = get_cik(cupsid)
+    merged_df.at[i, 'ticker'] = get_ticker(cupsid)
 
 
 merged_df = merged_df.replace("", np.nan)
 
-merged_df = merged_df.dropna()
+merged_df = merged_df.dropna(subset=['shares'])
 
 merged_df.at[121, 'shares'] = '1,655,125'
 
